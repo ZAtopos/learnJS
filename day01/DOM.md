@@ -1244,6 +1244,20 @@ console.log('分辨率: ' + screenWidth + 'x' + screenHeight);
     });
 </script>
 ```
+### AJAX 
+- XMLHttpRequest 对象
+```js
+var xhr = new XMLHttpRequest();
+
+xhr.onreadystatechange = function() { // 当 readyState 改变的时候
+  if (xhr.readyState === 4 && xhr.status === 200) { // 判断当前请求的状态 与 请求的状态码
+    console.log(xhr.responseText); // 输出服务端返回的内容
+  }
+}
+xhr.open('GET', '/', true); // 设定 GET 请求，请求的路径是 /，并且请求是异步的
+xhr.send(); // 发送！
+```
+
 
 
 
