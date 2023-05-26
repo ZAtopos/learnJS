@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "target": "ES5",     /* 支持 ES6 语法 */                      
+    "module": "commonjs",                     
+    "outDir": "./lib",
+    "rootDir": "./src",
+    "declaration": true,    /* 生成相应的.d.ts文件 */
+    "strict": true, 
+    "strictNullChecks": false,
+    "noImplicitThis": true
+  },
+  "exclude": ["node_modules", "lib", "**/*.test.ts"],
+  "include": ["src"]
+}
