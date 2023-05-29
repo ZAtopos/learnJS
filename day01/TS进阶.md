@@ -587,7 +587,7 @@ console.log(!!N)   // false
 console.log(!!z)   // false
 
 ```
-## TS迭代器
+## TS迭代器(iterator)
 ```ts
 interface IteratorInterface {
   next: () => {
@@ -699,7 +699,7 @@ let arr = [...'imooc']
 console.log(arr) //  ['i','m','o','o','c']
 ```
 
-#### 生成器
+## 生成器(Generator)
 //迭代器是一个对象   而生成器返回一个迭代器对象
 //生成器是一种能够中途停止，然后从停止的地方继续运行的函数 可以借助 yield 或 return 停止函数运行
 ```ts
@@ -735,4 +735,336 @@ third
 
 ```
 ts-node .\src\routine.ts
-#### 装饰器
+## 装饰器（Decorator）
+#### 装饰器工厂
+//通过装饰器工厂方法，可以额外传参，普通装饰器无法传参
+```ts
+function log(param: string) {
+  return function (target: any, name: string, descriptor: PropertyDescriptor) {
+    console.log('target:', target)
+    console.log('name:', name)
+    console.log('descriptor:', descriptor)
+
+    console.log('param:', param)
+  }
+}
+
+class Employee {
+
+  @log('with param')
+  routine() {
+    console.log('Daily routine')
+  }
+}
+
+const e = new Employee()
+e.routine()
+//运行结果
+target: Employee { routine: [Function] }
+name: routine
+descriptor: {
+  value: [Function],
+  writable: true,
+  enumerable: true,
+  configurable: true
+}
+param: with param
+Daily routine
+
+```
+#### 装饰器组合
+//由上至下依次对装饰器表达式求值
+//求值的结果会被当作函数，由下至上依次调用
+```ts
+function f() {
+  console.log('f(): evaluated');
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    console.log('f(): called');
+  }
+}
+
+function g() {
+  console.log('g(): evaluated');
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    console.log('g(): called');
+  }
+}
+
+class C {
+  @f()
+  @g()
+  method() {}
+}
+//输出结果
+f(): evaluated
+g(): evaluated
+g(): called
+f(): called
+```
+#### 类装饰器
+//方法一：通过类装饰器扩展类的属性和方法
+```ts
+function extension<T extends { new(...args:any[]): {} }>(constructor: T) {
+  // 重载构造函数
+  return class extends constructor {
+    // 扩展属性
+    public coreHour = '10:00-15:00'
+    // 函数重载
+    meeting() {
+      console.log('重载：Daily meeting!')
+    }
+  }
+}
+
+@extension
+class Employee {
+  public name!: string
+  public department!: string
+
+  constructor(name: string, department: string) {
+    this.name = name
+    this.department = department
+  }
+
+  meeting() {
+    console.log('Every Monday!')
+  }
+
+}
+
+let e = new Employee('Tom', 'IT')
+console.log(e) // Employee { name: 'Tom', department: 'IT', coreHour: '10:00-15:00' }
+e.meeting()    // 重载：Daily meeting!
+
+```
+//方法二：函数表达式的写法
+```ts
+const extension = (constructor: Function) => {
+  constructor.prototype.coreHour = '10:00-15:00'
+
+  constructor.prototype.meeting = () => {
+    console.log('重载：Daily meeting!');
+  }
+}
+
+@extension
+class Employee {
+  public name!: string
+  public department!: string
+
+  constructor(name: string, department: string) {
+    this.name = name
+    this.department = department
+  }
+
+  meeting() {
+    console.log('Every Monday!')
+  }
+
+}
+
+let e: any = new Employee('Tom', 'IT')
+console.log(e.coreHour) // 10:00-15:00
+e.meeting()             // 重载：Daily meeting!
+
+```
+#### 装饰器执行顺序
+```ts
+function extension(params: string) {
+  return function (target: any) {
+    console.log('类装饰器')
+  }
+}
+
+function method(params: string) {
+  return function (target: any, name: string, descriptor: PropertyDescriptor) {
+    console.log('方法装饰器')
+  }
+}
+
+function attribute(params: string) {
+  return function (target: any, name: string) {
+    console.log('属性装饰器')
+  }
+}
+
+function argument(params: string) {
+  return function (target: any, name: string, index: number) {
+    console.log('参数装饰器', index)
+  }
+}
+
+@extension('类装饰器')
+class Employee{
+  @attribute('属性装饰器')
+  public name!: string
+
+  @method('方法装饰器')
+  salary(@argument('参数装饰器') name: string, @argument('参数装饰器') department: string) {}
+}
+//运行结果
+属性装饰器
+参数装饰器 1
+参数装饰器 0
+方法装饰器
+类装饰器
+
+```
+## TypeScript Reflect Metadata
+// 主要用来在声明的时候添加和读取元数据
+//TIPS: 注意, 实例方法与静态方法取元数据是不同的，实例方法需要在类的实例上取元数据，静态方法直接在类上取元数据
+```ts
+import 'reflect-metadata'
+
+@Reflect.metadata('token', 'aW1vb2M=')
+class Employee {
+
+  @Reflect.metadata('level', 'D2')
+  salary() {
+    console.log('这是个秘密')
+  }
+
+  @Reflect.metadata('times', 'daily')
+  static meeting() {}
+
+}
+
+const token = Reflect.getMetadata('token', Employee)
+const level = Reflect.getMetadata('level', new Employee(), 'salary')
+const times = Reflect.getMetadata('times', Employee, 'meeting')
+
+console.log(token) // aW1vb2M=
+console.log(level) // D2
+console.log(times) // daily
+
+```
+#### API
+```ts
+import 'reflect-metadata'
+ 
+// 元数据的命令式定义，定义对象或属性的元数据
+Reflect.defineMetadata(metadataKey, metadataValue, target)
+Reflect.defineMetadata(metadataKey, metadataValue, target, propertyKey)
+ 
+// 检查对象或属性的原型链上是否存在元数据键
+let result = Reflect.hasMetadata(metadataKey, target)
+let result = Reflect.hasMetadata(metadataKey, target, propertyKey)
+ 
+// 检查对象或属性是否存在自己的元数据键
+let result = Reflect.hasMetadata(metadataKey, target)
+let result = Reflect.hasMetadata(metadataKey, target, propertyKey)
+ 
+// 获取对象或属性原型链上元数据键的元数据值
+let result = Reflect.getMetadata(metadataKey, target)
+let result = Reflect.getMetadata(metadataKey, target, propertyKey)
+ 
+// 获取对象或属性的自己的元数据键的元数据值
+let result = Reflect.getOwnMetadata(metadataKey, target)
+let result = Reflect.getOwnMetadata(metadataKey, target, propertyKey)
+ 
+// 获取对象或属性原型链上的所有元数据键
+let result = Reflect.getMetadataKeys(target)
+let result = Reflect.getMetadataKeys(target, propertyKey)
+ 
+// 获取对象或属性的所有自己的元数据键
+let result = Reflect.getOwnMetadataKeys(target)
+let result = Reflect.getOwnMetadataKeys(target, propertyKey)
+ 
+// 从对象或属性中删除元数据
+let result = Reflect.deleteMetadata(metadataKey, target)
+let result = Reflect.deleteMetadata(metadataKey, target, propertyKey)
+ 
+// 通过装饰器将元数据应用于构造函数
+@Reflect.metadata(metadataKey, metadataValue)
+class C {
+  // 通过装饰器将元数据应用于方法(属性)
+  @Reflect.metadata(metadataKey, metadataValue)
+  method() {
+  }
+}
+
+
+```
+#### 结合装饰器使用
+```ts
+import 'reflect-metadata'
+
+function get(path: string): MethodDecorator {
+  return (target, name) => {
+    Reflect.defineMetadata('path', path, target, name)
+  }
+}
+
+class Employee {
+  @get('/init')
+  async init() {}
+}
+
+const metadata = Reflect.getMetadata('path', new Employee(), 'init')
+console.log(metadata) // '/init'
+
+```
+## 混入(Mixins)
+#### TypeScript Mixins
+//简单实例
+```ts
+let target = {  a: 1,  b: 1 }
+let source1 = {  a: 2,  c: 3 }
+let source2 = {  b: 2,  d: 4 }
+
+Object.assign(target, source1, source2)
+
+console.log(target) // { a: 2, b: 2, c: 3, d: 4 }
+
+```
+```ts
+// Disposable Mixin
+class Disposable {
+  isDisposed!: boolean
+  dispose() {
+    this.isDisposed = true
+  }
+}
+
+// Activatable Mixin
+class Activatable {
+  isActive!: boolean;
+  activate() {
+    this.isActive = true
+  }
+  deactivate() {
+    this.isActive = false
+  }
+}
+
+class SmartObject{
+  constructor() {
+    setInterval(() => console.log(this.isActive + " : " + this.isDisposed), 500)
+  }
+
+  interact() {
+    this.activate()
+  }
+
+  // Disposable
+  isDisposed: boolean = false
+  dispose!: () => void
+  // Activatable
+  isActive: boolean = false
+  activate!: () => void
+  deactivate!: () => void
+}
+applyMixins(SmartObject, [Disposable, Activatable])
+
+let smartObj = new SmartObject()
+setTimeout(() => smartObj.interact(), 2000)
+
+function applyMixins(derivedCtor: any, baseCtors: any[]) {
+  baseCtors.forEach(baseCtor => {
+    Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
+      derivedCtor.prototype[name] = baseCtor.prototype[name]
+    })
+  })
+}
+
+```
