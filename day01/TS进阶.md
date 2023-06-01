@@ -1068,3 +1068,169 @@ function applyMixins(derivedCtor: any, baseCtors: any[]) {
 }
 
 ```
+## TS模块
+//export： 导出模块中的变量、函数、类、接口等；
+//import： 导入其他模块导出的变量、函数、类、接口等。
+//默认导出用default且只能有一个
+```ts 导出
+export default class ZipCodeValidator {
+  static numberRegexp = /^[0-9]+$/
+  isAcceptable(s: string) {
+    return s.length === 5 && ZipCodeValidator.numberRegexp.test(s)
+  }
+}
+
+```
+//导入
+```ts
+// 使用 import 导入
+import { a, add, Employee } from './export'
+//导入时重命名
+import { a as level, used as status } from './export'
+//将整个模块导入到一个变量
+import * as TYPES from './export'
+直接导入
+import'./export'
+```
+//export = 和 import = require()
+//export = 只能导出 对象
+//export = 导出的模块只能用 import = require() 形式导入
+```ts
+let numberRegexp = /^[0-9]+$/
+class ZipCodeValidator {
+  isAcceptable(s: string) {
+    return s.length === 5 && numberRegexp.test(s)
+  }
+}
+export = ZipCodeValidator
+```
+```ts
+import Zip = require('./ZipCodeValidator')
+
+// Some samples to try
+let strings = ['Hello', '98052', '101']
+
+// Validators to use
+let validator = new Zip()
+
+// Show whether each string passed each validator
+strings.forEach(s => {
+  console.log(`'${ s }' - ${ validator.isAcceptable(s) ? 'matches' : 'does not match' }`)
+});
+```
+## 命名空间
+//命名空间主要是为解决全局作用域内重名问题
+```ts
+namespace Calculate {
+  const fn = (x: number, y: number) => x * y 
+  export const add = (x: number, y:number) => x + y
+//编译后结果
+
+  "use strict";
+var Calculate;
+(function (Calculate) {
+    var fn = function (x, y) { return x * y; };
+    Calculate.add = function (x, y) { return x + y; };
+})(Calculate || (Calculate = {}));
+
+}
+//访问
+Calculate.add(2, 3)
+
+```
+## 声明合并
+#### 合并接口
+```ts
+interface Box {
+  height: number
+  width: number
+}
+
+interface Box {
+  scale: number
+  width: number // 类型相同 OK
+}
+
+let box: Box = {height: 5, width: 6, scale: 10}
+
+```
+//合并后的声明
+```ts
+interface Document {
+  createElement(tagName: 'canvas'): HTMLCanvasElement
+  createElement(tagName: 'div'): HTMLDivElement
+  createElement(tagName: 'span'): HTMLSpanElement
+  createElement(tagName: string): HTMLElement
+  createElement(tagName: any): Element
+}
+
+```
+#### 合并命名空间
+```ts
+namespace A {
+  let used = true
+
+  export function fn() {
+      return used
+  }
+}
+
+namespace A {
+  export function fnOther() {
+      return used // Error, 未找到变量 used
+  }
+}
+
+A.fn()      // OK
+A.fnOther() // OK
+
+```
+#### 命名空间与类的合并
+```ts
+class Album {
+  label!: Album.AlbumLabel
+}
+namespace Album {
+  export class AlbumLabel { }
+  export const num = 10
+}
+
+console.log(Album.num) // 10
+```
+
+#### 命名空间与函数的合并
+```ts
+function buildLabel(name: string): string {
+  return buildLabel.prefix + name + buildLabel.suffix
+}
+
+namespace buildLabel {
+  export let suffix = '.C'
+  export let prefix = 'Hello, '
+}
+
+console.log(buildLabel('Mr.Pioneer')) // Hello, Mr.Pioneer.C
+```
+####  命名空间与枚举的合并
+```ts
+enum Color {
+  red = 1,
+  green = 2,
+  blue = 4
+}
+
+namespace Color {
+  export function mixColor(colorName: string) {
+    switch (colorName) {
+      case 'yellow':
+        return Color.red + Color.green
+      case 'white':
+        return Color.red + Color.green + Color.blue
+      default:
+        break
+    }
+  }
+}
+
+console.log(Color.mixColor('yellow')) // 3
+```
